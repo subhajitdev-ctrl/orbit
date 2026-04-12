@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user information, mental health status, and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "format": "email" },
+        "phoneNumber": { "type": "string", "description": "User's contact number" },
+        "level": { "type": "integer", "description": "Progress level (0-100)" },
+        "symptoms": { "type": "array", "items": { "type": "string" } },
+        "goals": { "type": "array", "items": { "type": "string" } },
+        "subscription": { "type": "string", "enum": ["free", "premium", "vip"] },
+        "language": { "type": "string", "description": "User's preferred language" },
+        "currency": { "type": "string", "description": "User's local currency" },
+        "country": { "type": "string", "description": "User's country" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "mentorVoice": { "type": "string", "enum": ["male", "female"] },
+        "reminders": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "time": { "type": "string" }
+          }
+        },
+        "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+        "accentColor": { "type": "string", "enum": ["emerald", "blue", "purple", "rose", "amber"] }
+      },
+      "required": ["uid", "name", "email", "level", "subscription", "language", "currency"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "mentor"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "integer" },
+        "hasAudio": { "type": "boolean" },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["image", "video", "document", "audio"] },
+              "url": { "type": "string" },
+              "name": { "type": "string" },
+              "size": { "type": "integer" },
+              "transcription": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "role", "content", "timestamp"]
+    },
+    "DailyTask": {
+      "title": "Daily Task",
+      "description": "A task assigned to the user for mental health or personal growth.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "category": { "type": "string", "enum": ["Mental Health", "Habit Building", "Career Development", "Physical Health"] },
+        "dueDate": { "type": "string", "format": "date" }
+      },
+      "required": ["id", "title", "description", "completed", "category", "dueDate"]
+    },
+    "DailyRitual": {
+      "title": "Daily Ritual",
+      "description": "A recurring daily habit or reminder.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "lastCompletedDate": { "type": "string", "format": "date" }
+      },
+      "required": ["id", "title", "completed"]
+    },
+    "BioInsight": {
+      "title": "Bio-Insight",
+      "description": "AI-generated insight based on user's biological or behavioral data.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "value": { "type": "string" },
+        "score": { "type": "integer" },
+        "type": { "type": "string", "enum": ["sleep", "activity", "stress", "focus"] }
+      },
+      "required": ["id", "title", "value", "score", "type"]
+    },
+    "ProgressPoint": {
+      "title": "Progress Point",
+      "description": "A data point for tracking user progress over time.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "score": { "type": "integer" }
+      },
+      "required": ["date", "score"]
+    },
+    "MoodEntry": {
+      "title": "Mood Entry",
+      "description": "A daily mood log entry.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "mood": { "type": "string", "enum": ["calm", "anxious", "depressed", "stressed", "motivated", "neutral"] },
+        "note": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["date", "mood", "timestamp"]
+    },
+    "VisionBoardItem": {
+      "title": "Vision Board Item",
+      "description": "An AI-generated image for affirmations or goals.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["affirmation", "goal"] },
+        "prompt": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["id", "type", "prompt", "imageUrl", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "An in-app notification for the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "object", "description": "Firestore server timestamp" }
+      },
+      "required": ["title", "message", "type", "read", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "A log entry for system events like emails sent.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "to": { "type": "string" },
+        "subject": { "type": "string" },
+        "timestamp": { "type": "object", "description": "Firestore server timestamp" }
+      },
+      "required": ["type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "/users/{uid}/chats/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Chat history for a specific user."
+    },
+    "/users/{uid}/tasks/{taskId}": {
+      "schema": "DailyTask",
+      "description": "Daily tasks for a specific user."
+    },
+    "/users/{uid}/rituals/{ritualId}": {
+      "schema": "DailyRitual",
+      "description": "Daily rituals for a specific user."
+    },
+    "/users/{uid}/insights/{insightId}": {
+      "schema": "BioInsight",
+      "description": "Bio-insights for a specific user."
+    },
+    "/users/{uid}/progress/{pointId}": {
+      "schema": "ProgressPoint",
+      "description": "Progress tracking data for a specific user."
+    },
+    "/users/{uid}/moods/{date}": {
+      "schema": "MoodEntry",
+      "description": "Daily mood logs for a specific user."
+    },
+    "/users/{uid}/vision-board/{itemId}": {
+      "schema": "VisionBoardItem",
+      "description": "Vision board items for a specific user."
+    },
+    "/users/{uid}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-app notifications for a specific user."
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System audit logs."
+    }
+  }
+}

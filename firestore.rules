@@ -1,0 +1,261 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{uid}
+    // Document ID: {uid} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - name: string (required) - User's display name
+    //   - email: string (required, email format) - User's email
+    //   - phoneNumber: string (optional) - User's contact number
+    //   - level: number (required, 0-100) - Progress level
+    //   - symptoms: list (optional) - Array of symptoms
+    //   - goals: list (optional) - Array of goals
+    //   - subscription: string (required, enum) - Subscription tier
+    //   - language: string (required) - Preferred language
+    //   - currency: string (required) - Local currency
+    //   - country: string (optional) - User's country
+    //   - createdAt: timestamp (optional) - Creation time
+    //
+    // Collection: /users/{uid}/chats/{messageId}
+    // Fields:
+    //   - id: string (required) - Message ID
+    //   - role: string (required, enum: user, mentor) - Message role
+    //   - content: string (required) - Message content
+    //   - timestamp: number (required) - Message timestamp
+    //   - hasAudio: bool (optional) - Whether message has audio
+    //
+    // Collection: /users/{uid}/tasks/{taskId}
+    // Fields:
+    //   - id: string (required) - Task ID
+    //   - title: string (required) - Task title
+    //   - description: string (required) - Task description
+    //   - completed: bool (required) - Completion status
+    //   - category: string (required, enum) - Task category
+    //   - dueDate: string (required, date format) - Due date
+    //
+    // Collection: /users/{uid}/progress/{pointId}
+    // Fields:
+    //   - date: string (required, date format) - Progress date
+    //   - score: number (required) - Progress score
+    //
+    // Collection: /users/{uid}/vision-board/{itemId}
+    // Fields:
+    //   - id: string (required) - Item ID
+    //   - type: string (required, enum: affirmation, goal) - Item type
+    //   - prompt: string (required) - Generation prompt
+    //   - imageUrl: string (required) - Image URL (base64)
+    //   - timestamp: number (required) - Creation timestamp
+    //
+    // Collection: /users/{uid}/notifications/{notificationId}
+    // Fields:
+    //   - title: string (required) - Notification title
+    //   - message: string (required) - Notification message
+    //   - type: string (required, enum: info, success, warning, error) - Notification type
+    //   - read: bool (required) - Read status
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: /audit_logs/{logId}
+    // Fields:
+    //   - type: string (required) - Event type
+    //   - to: string (optional) - Recipient
+    //   - subject: string (optional) - Email subject
+    //   - timestamp: timestamp (required) - Event time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "subhajit.dev@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'level', 'subscription']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.level is number && data.level >= 0 && data.level <= 100 &&
+             data.subscription in ['free', 'premium', 'vip'] &&
+             (!('language' in data) || data.language is string) &&
+             (!('currency' in data) || data.currency is string) &&
+             (!('phoneNumber' in data) || data.phoneNumber is string) &&
+             (!('ageRange' in data) || data.ageRange is string) &&
+             (!('avatarUrl' in data) || data.avatarUrl is string) &&
+             (!('symptoms' in data) || data.symptoms is list) &&
+             (!('goals' in data) || data.goals is list) &&
+             (!('country' in data) || data.country is string) &&
+             (!('createdAt' in data) || data.createdAt is string) &&
+             (!('mentorVoice' in data) || data.mentorVoice in ['male', 'female']) &&
+             (!('reminders' in data) || (data.reminders is map && (!('enabled' in data.reminders) || data.reminders.enabled is bool) && (!('time' in data.reminders) || data.reminders.time is string))) &&
+             (!('theme' in data) || data.theme in ['light', 'dark', 'system']) &&
+             (!('accentColor' in data) || data.accentColor in ['emerald', 'blue', 'purple', 'rose', 'amber']);
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'role', 'content', 'timestamp']) &&
+             data.role in ['user', 'mentor'] &&
+             data.content is string && data.content.size() < 5000 &&
+             (data.content.size() > 0 || ('attachments' in data && data.attachments.size() > 0)) &&
+             data.timestamp is number &&
+             (!('attachments' in data) || data.attachments is list);
+    }
+
+    function isValidDailyTask(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'completed', 'category', 'dueDate']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 1000 &&
+             data.completed is bool &&
+             data.category is string &&
+             data.dueDate is string;
+    }
+
+    function isValidProgressPoint(data) {
+      return data.keys().hasAll(['date', 'score']) &&
+             data.date is string &&
+             data.score is number;
+    }
+
+    function isValidMoodEntry(data) {
+      return data.keys().hasAll(['date', 'mood', 'timestamp']) &&
+             data.date is string &&
+             data.mood in ['calm', 'anxious', 'depressed', 'stressed', 'motivated', 'neutral'] &&
+             data.timestamp is number &&
+             (!('note' in data) || (data.note is string && data.note.size() < 500));
+    }
+
+    function isValidVisionBoardItem(data) {
+      return data.keys().hasAll(['id', 'type', 'prompt', 'imageUrl', 'timestamp']) &&
+             data.id is string &&
+             data.type in ['affirmation', 'goal'] &&
+             data.prompt is string && data.prompt.size() < 1000 &&
+             data.imageUrl is string && data.imageUrl.size() < 2000000 && // Allow large base64
+             data.timestamp is number;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['title', 'message', 'type', 'read', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.message is string && data.message.size() < 1000 &&
+             data.type in ['info', 'success', 'warning', 'error'] &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['type', 'timestamp']) &&
+             data.type is string &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidDailyRitual(data) {
+      return data.keys().hasAll(['id', 'title', 'completed']) &&
+             data.id is string &&
+             data.title is string && data.title.size() > 0 &&
+             data.completed is bool &&
+             (!('description' in data) || data.description is string) &&
+             (!('lastCompletedDate' in data) || data.lastCompletedDate is string);
+    }
+
+    function isValidBioInsight(data) {
+      return data.keys().hasAll(['id', 'title', 'value', 'score', 'type']) &&
+             data.id is string &&
+             data.title is string &&
+             data.value is string &&
+             data.score is number &&
+             data.type in ['sleep', 'activity', 'stress', 'focus'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(uid) && isValidUserProfile(request.resource.data);
+      allow delete: if false; // Users cannot delete their profile for now
+
+      match /chats/{messageId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidChatMessage(request.resource.data);
+        allow update: if isOwner(uid) && isValidChatMessage(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /tasks/{taskId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidDailyTask(request.resource.data);
+        allow update: if isOwner(uid) && isValidDailyTask(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /progress/{pointId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidProgressPoint(request.resource.data);
+        allow update: if isOwner(uid) && isValidProgressPoint(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /moods/{date} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidMoodEntry(request.resource.data);
+        allow update: if isOwner(uid) && isValidMoodEntry(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /vision-board/{itemId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidVisionBoardItem(request.resource.data);
+        allow update: if isOwner(uid) && isValidVisionBoardItem(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidNotification(request.resource.data);
+        allow update: if isOwner(uid) && isValidNotification(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /rituals/{ritualId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidDailyRitual(request.resource.data);
+        allow update: if isOwner(uid) && isValidDailyRitual(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /insights/{insightId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidBioInsight(request.resource.data);
+        allow update: if isOwner(uid) && isValidBioInsight(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

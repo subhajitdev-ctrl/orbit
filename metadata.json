@@ -1,0 +1,5 @@
+{
+  "name": "ORBIT: Mental Health & Expert Mentorship",
+  "description": "A modern, virtual subscription-based mental health improvement app with expert mentorship, daily tasks, and progress tracking for depression, anxiety, trauma, and career guidance.",
+  "requestFramePermissions": ["microphone"]
+}
