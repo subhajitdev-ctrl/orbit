@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 interface CustomAudioPlayerProps {
   url: string;
   className?: string;
+  autoPlay?: boolean;
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
@@ -14,6 +15,7 @@ interface CustomAudioPlayerProps {
 export const CustomAudioPlayer = ({ 
   url, 
   className,
+  autoPlay = true,
   onPlay,
   onPause,
   onEnded
@@ -27,6 +29,16 @@ export const CustomAudioPlayer = ({
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (autoPlay && url) {
+      audio.play().then(() => {
+        setIsPlaying(true);
+        onPlay?.();
+      }).catch(err => {
+        console.warn("Autoplay blocked or failed:", err);
+        setIsPlaying(false);
+      });
+    }
 
     const setAudioData = () => {
       setDuration(audio.duration);

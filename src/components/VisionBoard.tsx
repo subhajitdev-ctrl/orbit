@@ -170,7 +170,7 @@ export const VisionBoard = ({ user }: VisionBoardProps) => {
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder={type === 'affirmation' ? "e.g., I am worthy of love and success" : "e.g., Running my first marathon"}
-                    className="w-full bg-zinc-50 border-none rounded-3xl py-4 px-6 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none"
+                    className="w-full bg-zinc-50 border-none rounded-3xl py-4 px-6 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none text-zinc-500"
                     disabled={isGenerating}
                   />
                 </div>

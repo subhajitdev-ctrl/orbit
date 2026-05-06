@@ -336,13 +336,15 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
   };
 
   const stopSpeak = () => {
+    if (mentorAudioUrl) {
+      URL.revokeObjectURL(mentorAudioUrl);
+    }
     setMentorAudioUrl(null);
     setIsSpeaking(false);
   };
 
   const handleSpeak = async (text: string) => {
     if (!text) return;
-    if (user.subscription === 'free') return;
     
     try {
       stopSpeak();
@@ -358,31 +360,40 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
           bytes[i] = binaryString.charCodeAt(i);
         }
         
-        // Create a WAV header for the PCM data (assuming 24kHz, 16-bit mono)
-        const wavHeader = new ArrayBuffer(44);
-        const view = new DataView(wavHeader);
+        // Check if it already has a WAV header (starts with RIFF)
+        const isWav = binaryString.startsWith('RIFF');
         
-        const writeString = (offset: number, string: string) => {
-          for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-          }
-        };
+        let blob: Blob;
+        if (isWav) {
+          blob = new Blob([bytes], { type: 'audio/wav' });
+        } else {
+          // Create a WAV header for the PCM data (assuming 24kHz, 16-bit mono)
+          const wavHeader = new ArrayBuffer(44);
+          const view = new DataView(wavHeader);
+          
+          const writeString = (offset: number, string: string) => {
+            for (let i = 0; i < string.length; i++) {
+              view.setUint8(offset + i, string.charCodeAt(i));
+            }
+          };
 
-        writeString(0, 'RIFF');
-        view.setUint32(4, 36 + bytes.length, true);
-        writeString(8, 'WAVE');
-        writeString(12, 'fmt ');
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true); // PCM
-        view.setUint16(22, 1, true); // Mono
-        view.setUint32(24, 24000, true); // Sample rate
-        view.setUint32(28, 48000, true); // Byte rate
-        view.setUint16(32, 2, true); // Block align
-        view.setUint16(34, 16, true); // Bits per sample
-        writeString(36, 'data');
-        view.setUint32(40, bytes.length, true);
+          writeString(0, 'RIFF');
+          view.setUint32(4, 36 + bytes.length, true);
+          writeString(8, 'WAVE');
+          writeString(12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true); // PCM
+          view.setUint16(22, 1, true); // Mono
+          view.setUint32(24, 24000, true); // Sample rate
+          view.setUint32(28, 48000, true); // Byte rate
+          view.setUint16(32, 2, true); // Block align
+          view.setUint16(34, 16, true); // Bits per sample
+          writeString(36, 'data');
+          view.setUint32(40, bytes.length, true);
 
-        const blob = new Blob([wavHeader, bytes], { type: 'audio/wav' });
+          blob = new Blob([wavHeader, bytes], { type: 'audio/wav' });
+        }
+        
         const url = URL.createObjectURL(blob);
         setMentorAudioUrl(url);
       }
@@ -431,20 +442,17 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
 
             <div className="grid grid-cols-3 gap-4 pt-4">
               <button 
-                onClick={user.subscription === 'free' ? undefined : toggleSpeech}
-                className={cn(
-                  "flex flex-col items-center gap-2 group",
-                  user.subscription === 'free' && "opacity-50 cursor-not-allowed"
-                )}
+                onClick={toggleSpeech}
+                className="flex flex-col items-center gap-2 group"
               >
                 <div className={cn(
                   "h-12 w-12 rounded-full flex items-center justify-center transition-all group-hover:scale-110",
                   isSpeechEnabled ? "bg-[#E8EEEB] text-primary" : "bg-zinc-100 text-zinc-400"
                 )}>
-                  {user.subscription === 'free' ? <Lock className="h-5 w-5" /> : (isSpeechEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />)}
+                  {isSpeechEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                 </div>
                 <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">
-                  {user.subscription === 'free' ? "Premium" : (isSpeechEnabled ? "Voice On" : "Voice Off")}
+                  {isSpeechEnabled ? "Voice On" : "Voice Off"}
                 </span>
               </button>
               <button className="flex flex-col items-center gap-2 group">
@@ -699,7 +707,7 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
 
       {/* Mentor Speaking Overlay */}
       <AnimatePresence>
-        {mentorAudioUrl && (
+        {(isSpeaking || mentorAudioUrl) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -708,15 +716,28 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
           >
             <Card className="p-4 bg-zinc-900 text-white rounded-[2rem] shadow-2xl border-none flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Orbit className="h-6 w-6 text-primary animate-pulse" />
+                <Orbit className={cn("h-6 w-6 text-primary", (isSpeaking && !mentorAudioUrl) ? "animate-spin" : "animate-pulse")} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Mentor Speaking</p>
-                <CustomAudioPlayer 
-                  url={mentorAudioUrl} 
-                  className="bg-transparent border-none p-0"
-                  onEnded={() => stopSpeak()}
-                />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                  {mentorAudioUrl ? "Mentor Speaking" : "Mentor is preparing voice..."}
+                </p>
+                {mentorAudioUrl ? (
+                  <CustomAudioPlayer 
+                    url={mentorAudioUrl} 
+                    className="bg-transparent border-none p-0"
+                    onEnded={() => stopSpeak()}
+                  />
+                ) : (
+                  <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ x: "-100%" }}
+                      animate={{ x: "100%" }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      className="h-full w-1/2 bg-primary"
+                    />
+                  </div>
+                )}
               </div>
               <button 
                 onClick={stopSpeak}
@@ -858,7 +879,7 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="What's on your mind?"
-                    className="w-full bg-zinc-50 border-none rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 text-sm placeholder:text-zinc-400"
+                    className="w-full bg-zinc-50 border-none rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 text-sm placeholder:text-zinc-400 text-zinc-500"
                   />
                 </div>
               </>

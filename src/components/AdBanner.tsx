@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { UserProfile } from '../types';
 
 interface AdBannerProps {
@@ -17,14 +17,30 @@ export const AdBanner = ({ user, slot, format = 'auto' }: AdBannerProps) => {
   const adsenseClientId = import.meta.env.VITE_ADSENSE_CLIENT_ID;
   const adsenseSlotId = slot || import.meta.env.VITE_ADSENSE_SLOT_ID;
 
+  const hasPushed = useRef(false);
+
   useEffect(() => {
-    if (adsenseClientId && adsenseSlotId) {
-      try {
-        // @ts-ignore
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.error('AdSense error:', e);
-      }
+    if (adsenseClientId && adsenseSlotId && !hasPushed.current) {
+      const timer = setTimeout(() => {
+        try {
+          // Check if there are any available ad slots that haven't been initialized
+          const ads = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status="done"])');
+          
+          if (ads.length > 0) {
+            // @ts-ignore
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            hasPushed.current = true;
+          }
+        } catch (e: any) {
+          // Specifically ignore the "all elements already have ads" error as it's common in SPAs
+          if (e?.message?.includes('already have ads')) {
+            return;
+          }
+          console.error('AdSense error:', e);
+        }
+      }, 300); // Small delay to ensure DOM is ready
+
+      return () => clearTimeout(timer);
     }
   }, [adsenseClientId, adsenseSlotId]);
 

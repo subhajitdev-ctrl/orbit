@@ -126,7 +126,7 @@ export const MoodTracker = ({ user }: MoodTrackerProps) => {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Any specific triggers or thoughts? (Optional)"
-          className="w-full bg-zinc-50 border-none rounded-3xl py-4 px-6 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-none"
+          className="w-full bg-zinc-50 border-none rounded-3xl py-4 px-6 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-none text-zinc-500"
         />
 
         <Button 

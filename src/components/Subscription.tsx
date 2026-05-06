@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { 
   Check, 
   Zap, 
@@ -27,7 +28,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'details' | 'processing' | 'success'>('details');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking' | 'paypal'>('paypal');
 
   const tiers: Tier[] = [
     {
@@ -38,6 +39,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
       features: [
         'Daily task generation (Limited)',
         'Basic AI mentorship',
+        'Voice support (TTS)',
         'Progress tracking',
         'Community access'
       ],
@@ -51,7 +53,6 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
       description: 'Advanced expert mentorship',
       features: [
         'Expert-level AI mentorship',
-        'Voice support (TTS)',
         'Personalized pathfinding',
         'Ad-free experience',
         'Priority task generation'
@@ -107,8 +108,11 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
     }, 3000);
   };
 
+  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+
   return (
-    <div className="space-y-8 pb-32">
+    <PayPalScriptProvider options={{ clientId: paypalClientId || "test" }}>
+      <div className="space-y-8 pb-32">
       <div className="space-y-2">
         <h1 className="text-4xl font-display font-bold text-zinc-900">Choose Your Path</h1>
         <p className="text-sm text-zinc-500 leading-relaxed font-medium">
@@ -234,6 +238,15 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
 
                     <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-xl">
                       <button 
+                        onClick={() => setPaymentMethod('paypal')}
+                        className={cn(
+                          "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                          paymentMethod === 'paypal' ? "bg-zinc-50 dark:bg-zinc-800 shadow-sm" : "text-zinc-500"
+                        )}
+                      >
+                        PayPal
+                      </button>
+                      <button 
                         onClick={() => setPaymentMethod('card')}
                         className={cn(
                           "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
@@ -251,18 +264,47 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                       >
                         UPI
                       </button>
-                      <button 
-                        onClick={() => setPaymentMethod('netbanking')}
-                        className={cn(
-                          "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                          paymentMethod === 'netbanking' ? "bg-zinc-50 dark:bg-zinc-800 shadow-sm" : "text-zinc-500"
-                        )}
-                      >
-                        Banking
-                      </button>
                     </div>
 
                     <div className="space-y-4">
+                      {paymentMethod === 'paypal' && (
+                        <div className="space-y-4">
+                          <p className="text-[10px] text-zinc-500 text-center uppercase tracking-widest font-bold">Pay safely with your PayPal account</p>
+                          <PayPalButtons 
+                            style={{ layout: "vertical", shape: "pill", label: "pay" }}
+                            createOrder={async () => {
+                              const response = await fetch("/api/paypal/create-order", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  amount: selectedTier.price,
+                                  currency: user.currency
+                                })
+                              });
+                              const order = await response.json();
+                              return order.id;
+                            }}
+                            onApprove={async (data) => {
+                              setPaymentStep('processing');
+                              const response = await fetch("/api/paypal/capture-order", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ orderID: data.orderID })
+                              });
+                              const details = await response.json();
+                              if (details.status === "COMPLETED") {
+                                setPaymentStep('success');
+                                setTimeout(() => {
+                                  onUpgrade(selectedTier.id as 'premium' | 'vip');
+                                  setSelectedTier(null);
+                                  setPaymentStep('details');
+                                }, 2000);
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+
                       {paymentMethod === 'card' && (
                         <>
                           <div className="space-y-2">
@@ -271,7 +313,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                               <input 
                                 type="text" 
                                 placeholder="4242 4242 4242 4242"
-                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono"
+                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono text-zinc-500"
                               />
                               <Lock className="absolute right-4 top-4 h-4 w-4 text-zinc-400" />
                             </div>
@@ -282,7 +324,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                               <input 
                                 type="text" 
                                 placeholder="MM/YY"
-                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono"
+                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono text-zinc-500"
                               />
                             </div>
                             <div className="space-y-2">
@@ -290,7 +332,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                               <input 
                                 type="text" 
                                 placeholder="123"
-                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono"
+                                className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono text-zinc-500"
                               />
                             </div>
                           </div>
@@ -303,7 +345,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                           <input 
                             type="text" 
                             placeholder="username@upi"
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono"
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 text-sm font-mono text-zinc-500"
                           />
                         </div>
                       )}
@@ -312,7 +354,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Select Bank</label>
                           <div className="relative">
-                            <select className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 pr-10 text-sm appearance-none">
+                            <select className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-xl p-4 pr-10 text-sm appearance-none text-zinc-500">
                               <option>State Bank of India</option>
                               <option>HDFC Bank</option>
                               <option>ICICI Bank</option>
@@ -327,12 +369,14 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
                       )}
                     </div>
 
-                    <Button 
-                      className="w-full py-6 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-lg font-bold"
-                      onClick={handlePayment}
-                    >
-                      Pay {user.currency} {selectedTier.price}
-                    </Button>
+                    {paymentMethod !== 'paypal' && (
+                      <Button 
+                        className="w-full py-6 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-lg font-bold"
+                        onClick={handlePayment}
+                      >
+                        Pay {user.currency} {selectedTier.price}
+                      </Button>
+                    )}
                     
                     <p className="text-[10px] text-center text-zinc-400 uppercase tracking-widest">
                       Powered by ORBIT Secure Pay
@@ -367,6 +411,7 @@ export const Subscription = ({ user, onUpgrade }: SubscriptionProps) => {
         )}
       </AnimatePresence>
     </div>
+    </PayPalScriptProvider>
   );
 };
 

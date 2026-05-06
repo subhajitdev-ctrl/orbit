@@ -943,7 +943,7 @@ function SettingsScreen({
                   type="time" 
                   value={reminders.time} 
                   onChange={(e) => setReminders({ ...reminders, time: e.target.value })}
-                  className="bg-zinc-50 border-none rounded-lg p-2 text-xs font-bold text-zinc-600"
+                  className="bg-zinc-50 border-none rounded-lg p-2 text-xs font-bold text-zinc-500"
                 />
               )}
               <button 
@@ -974,7 +974,7 @@ function SettingsScreen({
                 <select 
                   value={language} 
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-zinc-50 border-none rounded-2xl p-4 pr-10 text-sm font-bold text-zinc-600 appearance-none"
+                  className="w-full bg-zinc-50 border-none rounded-2xl p-4 pr-10 text-sm font-bold text-zinc-500 appearance-none"
                 >
                   <option value="en-US">English (US)</option>
                   <option value="en-GB">English (UK)</option>
@@ -998,7 +998,7 @@ function SettingsScreen({
                 <select 
                   value={currency} 
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full bg-zinc-50 border-none rounded-2xl p-4 pr-10 text-sm font-bold text-zinc-600 appearance-none"
+                  className="w-full bg-zinc-50 border-none rounded-2xl p-4 pr-10 text-sm font-bold text-zinc-500 appearance-none"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="INR">INR (₹)</option>

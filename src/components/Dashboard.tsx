@@ -311,7 +311,7 @@ export const Dashboard = ({ user, progress, moods, rituals, insights, onToggleRi
                   value={newRitualTitle}
                   onChange={(e) => setNewRitualTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddRitual()}
-                  className="w-full bg-zinc-50 border-none rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full bg-zinc-50 border-none rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-zinc-500"
                 />
                 <div className="flex items-center gap-2">
                   <Button size="sm" onClick={handleAddRitual} className="flex-1 rounded-xl">Add Ritual</Button>

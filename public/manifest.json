@@ -1,17 +1,26 @@
 {
-  "name": "ORBIT: Mental Health & Mentorship",
+  "name": "ORBIT: Mental Health & Expert Mentorship",
   "short_name": "ORBIT",
-  "description": "Your path to clarity through expert mentorship and AI-driven insights.",
+  "description": "Premium mental health improvement with expert mentorship, daily tasks, and mood tracking.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#10b981",
+  "categories": ["health", "lifestyle", "medical"],
+  "screenshots": [],
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
