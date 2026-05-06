@@ -66,21 +66,19 @@ ORBIT is a high-performance, AI-driven mental health and mentorship application 
 
 ## Deployment
 
-### Vercel Deployment
+### Vercel Deployment Troubleshooting
 
-This project is configured for seamless deployment on **Vercel**.
+If you encounter a **403 Forbidden** error on Vercel:
 
-1.  **Environment Variables**: In your Vercel Dashboard, add the following secrets:
-    -   `GEMINI_API_KEY`: Your Google Gemini API Key.
-    -   `VITE_ADSENSE_CLIENT_ID`: Your AdSense Client ID (if applicable).
-    -   `VITE_ADSENSE_SLOT_ID`: Your AdSense Slot ID (if applicable).
-    -   `VITE_PAYPAL_CLIENT_ID`: Your PayPal Client ID.
-    -   `PAYPAL_CLIENT_SECRET`: Your PayPal Client Secret.
-    -   `PAYPAL_MODE`: Set to `sandbox` or `live`.
+1.  **Check Output Directory**: In your Vercel Project Settings, ensure the "Output Directory" is set to `dist`.
+2.  **Build Command**: Ensure the Build Command is `npm run build`.
+3.  **Environment Variables**: Ensure you have added `GEMINI_API_KEY` (and other secrets) in the Vercel dashboard.
+4.  **Framework Preset**: Select "Vite" as the Framework Preset if it's not automatically detected.
 
-2.  **Serverless Support**: The app uses an Express backend proxied via Vercel Functions (as defined in `/api/index.ts` and `vercel.json`). This ensures your `GEMINI_API_KEY` and `PAYPAL_CLIENT_SECRET` remain secure on the server side.
-
-3.  **Deployment**: Connect your GitHub repository to Vercel and it will automatically build and deploy.
+The project uses a hybrid approach:
+-   **Frontend**: Built by Vite into `dist/`.
+-   **Backend**: Serverless functions in `api/` (using Express logic from `server.ts`).
+-   **Routing**: `vercel.json` routes `/api/*` to the function and everything else to `index.html`.
 
 ### Cloud Run Deployment
 The app is also optimized for **Cloud Run**. Simply use the provided `Dockerfile` or rely on Cloud Build's automatic detection of the `start` script in `package.json`.

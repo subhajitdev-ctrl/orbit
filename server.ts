@@ -223,7 +223,9 @@ export async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // Only serve static files if NOT on Vercel (e.g. self-hosted or Cloud Run)
+    // Vercel routes are handled by vercel.json rewrites to dist folder
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
