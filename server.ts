@@ -43,7 +43,12 @@ export async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ 
+      status: "ok", 
+      env: process.env.NODE_ENV,
+      vercel: !!process.env.VERCEL,
+      time: new Date().toISOString()
+    });
   });
 
   // Create PayPal Order
