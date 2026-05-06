@@ -47,8 +47,8 @@ ORBIT is a high-performance, AI-driven mental health and mentorship application 
    Create a `.env` file in the root directory based on `.env.example`:
    ```env
    GEMINI_API_KEY="your_gemini_api_key"
-   VITE_ADSENSE_CLIENT_ID="your_adsense_client_id"
-   VITE_ADSENSE_SLOT_ID="your_adsense_slot_id"
+   VITE_ADSENSE_CLIENT_ID="ca-pub-XXXXXXXXXXXXXXXX"
+   VITE_ADSENSE_SLOT_ID="XXXXXXXXXX"
    ```
 
 4. **Firebase Configuration**:
@@ -67,6 +67,33 @@ ORBIT is a high-performance, AI-driven mental health and mentorship application 
 ## Deployment
 
 The app is optimized for deployment on **Cloud Run** or any static hosting provider (Vercel, Netlify, Firebase Hosting).
+
+## Google Play Store Publishing
+
+To publish ORBIT as a native Android app:
+
+1.  **Build the production web app**:
+    ```bash
+    npm run build
+    ```
+2.  **Initialize Capacitor**:
+    ```bash
+    npx cap init ORBIT com.orbit.mentalhealth
+    npx cap add android
+    ```
+3.  **Sync the build**:
+    ```bash
+    npx cap sync
+    ```
+4.  **Open in Android Studio**:
+    ```bash
+    npx cap open android
+    ```
+5.  **Digital Asset Links**:
+    Update `public/.well-known/assetlinks.json` with your app's SHA256 fingerprint from the Google Play Console to enable "Trusted Web Activity" features.
+
+6.  **Icons**:
+    Ensure you provide a 512x512 PNG icon in `/public` as many app stores require it.
 
 ## License
 

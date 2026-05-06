@@ -528,7 +528,7 @@ export const MentorshipChat = ({ user }: MentorshipChatProps) => {
               {isSpeechEnabled ? "Voice Enabled" : "Voice Muted"}
             </button>
           </div>
-          <AdBanner user={user} slot="MENTOR_CHAT_SLOT" />
+          <AdBanner user={user} slotId="MENTOR_CHAT_SLOT" />
 
           <AnimatePresence initial={false}>
             {messages.map((m) => (
