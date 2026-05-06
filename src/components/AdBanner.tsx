@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { UserProfile } from '../types';
 
@@ -10,17 +10,27 @@ interface AdBannerProps {
 }
 
 export function AdBanner({ user, slotId, format = 'auto', className }: AdBannerProps) {
+  const adRef = useRef<HTMLModElement>(null);
+  const pushed = useRef(false);
+
   useEffect(() => {
     // Hide ads for paid subscribers
     if (user?.subscription && user.subscription !== 'free') {
       return;
     }
 
-    try {
-      (window as any).adsbygoogle = (window as any).adsbygoogle || [];
-      (window as any).adsbygoogle.push({});
-    } catch (e) {
-      console.error('AdSense error:', e);
+    if (adRef.current && !pushed.current) {
+      try {
+        (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+        (window as any).adsbygoogle.push({});
+        pushed.current = true;
+      } catch (e: any) {
+        if (e?.message?.includes("already have ads")) {
+          pushed.current = true;
+          return;
+        }
+        console.error('AdSense error:', e);
+      }
     }
   }, [user?.subscription]);
 
@@ -45,6 +55,7 @@ export function AdBanner({ user, slotId, format = 'auto', className }: AdBannerP
   return (
     <div className={className}>
       <ins
+        ref={adRef}
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client={clientId}
