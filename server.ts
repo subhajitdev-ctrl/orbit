@@ -4,11 +4,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import paypal from "@paypal/checkout-server-sdk";
 import dotenv from "dotenv";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Gemini Setup
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 // PayPal Setup
 let client: paypal.core.PayPalHttpClient | null = null;
@@ -80,6 +84,134 @@ export async function startServer() {
       res.json(capture.result);
     } catch (err: any) {
       console.error("PayPal Capture Order Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Gemini Endpoints
+  app.post("/api/gemini/mentor", async (req, res) => {
+    try {
+      const { messages, systemInstruction } = req.body;
+      
+      const result = await genAI.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: messages,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      });
+      
+      res.json({ text: result.text });
+    } catch (err: any) {
+      console.error("Gemini Mentor Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/gemini/tasks", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      const result = await genAI.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+      
+      res.json({ text: result.text });
+    } catch (err: any) {
+      console.error("Gemini Tasks Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/gemini/speech", async (req, res) => {
+    try {
+      const { text, voiceName } = req.body;
+      
+      const result = await genAI.models.generateContent({
+        model: "gemini-3.1-flash-tts-preview",
+        contents: [{ parts: [{ text }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              // @ts-ignore
+              prebuiltVoiceConfig: { voiceName },
+            },
+          },
+        },
+      });
+      
+      const base64Audio = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      res.json({ audio: base64Audio });
+    } catch (err: any) {
+      console.error("Gemini Speech Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/gemini/transcribe", async (req, res) => {
+    try {
+      const { base64Audio, prompt } = req.body;
+      
+      const result = await genAI.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "audio/webm",
+                  data: base64Audio
+                }
+              },
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        config: {
+          temperature: 0.1,
+        },
+      });
+      
+      res.json({ text: result.text });
+    } catch (err: any) {
+      console.error("Gemini Transcribe Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/gemini/image", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      const result = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [{ text: prompt }],
+        },
+        config: {
+          imageConfig: { aspectRatio: "1:1" },
+        },
+      });
+      
+      let imageUrl = null;
+      for (const part of result.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+      
+      res.json({ url: imageUrl });
+    } catch (err: any) {
+      console.error("Gemini Image Error:", err);
       res.status(500).json({ error: err.message });
     }
   });

@@ -66,7 +66,24 @@ ORBIT is a high-performance, AI-driven mental health and mentorship application 
 
 ## Deployment
 
-The app is optimized for deployment on **Cloud Run** or any static hosting provider (Vercel, Netlify, Firebase Hosting).
+### Vercel Deployment
+
+This project is configured for seamless deployment on **Vercel**.
+
+1.  **Environment Variables**: In your Vercel Dashboard, add the following secrets:
+    -   `GEMINI_API_KEY`: Your Google Gemini API Key.
+    -   `VITE_ADSENSE_CLIENT_ID`: Your AdSense Client ID (if applicable).
+    -   `VITE_ADSENSE_SLOT_ID`: Your AdSense Slot ID (if applicable).
+    -   `VITE_PAYPAL_CLIENT_ID`: Your PayPal Client ID.
+    -   `PAYPAL_CLIENT_SECRET`: Your PayPal Client Secret.
+    -   `PAYPAL_MODE`: Set to `sandbox` or `live`.
+
+2.  **Serverless Support**: The app uses an Express backend proxied via Vercel Functions (as defined in `/api/index.ts` and `vercel.json`). This ensures your `GEMINI_API_KEY` and `PAYPAL_CLIENT_SECRET` remain secure on the server side.
+
+3.  **Deployment**: Connect your GitHub repository to Vercel and it will automatically build and deploy.
+
+### Cloud Run Deployment
+The app is also optimized for **Cloud Run**. Simply use the provided `Dockerfile` or rely on Cloud Build's automatic detection of the `start` script in `package.json`.
 
 ## Google Play Store Publishing
 

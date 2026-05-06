@@ -1,7 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
 import { Message, UserProfile, Task } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const EXPERT_PERSONA = `You are a human world-class mentor, a master of psychology, career strategy, and emotional intelligence. Your voice is calm, authoritative yet deeply empathetic, and profoundly insightful. You are NOT a generic AI; you are a high-level advisor for both everyday people and VIPs/celebrities.
 
@@ -27,37 +24,34 @@ export async function getMentorResponse(
   const userTime = new Date().toLocaleString();
   const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: messages.map(m => {
-      const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [{ text: m.content || (m.attachments ? "[Sent attachments]" : "") }];
-      
-      if (m.attachments) {
-        m.attachments.forEach(att => {
-          if (att.type === 'image') {
-            const base64Data = att.url.split(',')[1];
-            if (base64Data) {
-              parts.push({
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: base64Data
-                }
-              });
-            }
-          } else {
-            // For other types, we just mention them in text if we can't send them directly
-            parts[0].text += `\n[Attachment: ${att.type} - ${att.name || 'unnamed'}]`;
+  const geminiMessages = messages.map(m => {
+    const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [{ text: m.content || (m.attachments ? "[Sent attachments]" : "") }];
+    
+    if (m.attachments) {
+      m.attachments.forEach(att => {
+        if (att.type === 'image') {
+          const base64Data = att.url.split(',')[1];
+          if (base64Data) {
+            parts.push({
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: base64Data
+              }
+            });
           }
-        });
-      }
+        } else {
+          parts[0].text += `\n[Attachment: ${att.type} - ${att.name || 'unnamed'}]`;
+        }
+      });
+    }
 
-      return {
-        role: m.role === 'user' ? 'user' : 'model',
-        parts
-      };
-    }),
-    config: {
-      systemInstruction: `${EXPERT_PERSONA}
+    return {
+      role: m.role === 'user' ? 'user' : 'model',
+      parts
+    };
+  });
+
+  const systemInstruction = `${EXPERT_PERSONA}
 
 User Profile: ${JSON.stringify(userProfile)}
 
@@ -69,19 +63,22 @@ IMPORTANT:
 1. Use the "Current Context" (Time/Date/Timezone) to be aware of the user's day. If it's morning, greet them accordingly. If it's late at night, be mindful of their rest.
 2. Detect the user's language from their last message. If they speak in Hindi, reply in Hindi. If they speak in English, reply in English. Always match the user's preferred language or the language they are currently using.
 3. Tailor your advice based on their Age Range: ${userProfile.ageRange || 'Not specified'}. A teenager needs different guidance than a 40-year-old executive.
-4. Apply the "Conversation Reality Detection" rules strictly.`,
-      temperature: 0.7,
-    },
+4. Apply the "Conversation Reality Detection" rules strictly.`;
+
+  const response = await fetch("/api/gemini/mentor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: geminiMessages, userProfile, systemInstruction }),
   });
 
-  return response.text;
+  if (!response.ok) throw new Error("Mentor response failed");
+  const data = await response.json();
+  return data.text;
 }
 
 export async function generateDailyTasks(userProfile: UserProfile): Promise<Task[]> {
   const taskCount = userProfile.subscription === 'free' ? 3 : 5;
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
-    contents: `As a world-class mentor, generate ${taskCount} highly personalized, expert-level daily tasks for a user with these symptoms: ${userProfile.symptoms.join(', ')} and goals: ${userProfile.goals.join(', ')}. 
+  const prompt = `As a world-class mentor, generate ${taskCount} highly personalized, expert-level daily tasks for a user with these symptoms: ${userProfile.symptoms.join(', ')} and goals: ${userProfile.goals.join(', ')}. 
     Current Level: ${userProfile.level}/100.
     Subscription Plan: ${userProfile.subscription.toUpperCase()}.
     
@@ -90,14 +87,19 @@ export async function generateDailyTasks(userProfile: UserProfile): Promise<Task
     2. Actionable and designed for "Zero to Hero" progress.
     3. Categorized as: Mental Health, Habit Building, Career Development, or Physical Health.
     
-    Return as a JSON array of tasks with: id (string), title (string), description (string), category (string).`,
-    config: {
-      responseMimeType: "application/json",
-    },
+    Return as a JSON array of tasks with: id (string), title (string), description (string), category (string).`;
+
+  const response = await fetch("/api/gemini/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
   });
 
+  if (!response.ok) throw new Error("Task generation failed");
+  const data = await response.json();
+
   try {
-    const tasks = JSON.parse(response.text);
+    const tasks = JSON.parse(data.text);
     return tasks.map((t: Task) => ({
       ...t,
       completed: false,
@@ -110,73 +112,39 @@ export async function generateDailyTasks(userProfile: UserProfile): Promise<Task
 }
 
 export async function generateSpeech(text: string, voiceName: string = 'Kore') {
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voiceName as "Puck" | "Kore" | "Fenrir" | "Aoife" | "Charon" | "Leda" | "Orpheus" | "Castor" },
-        },
-      },
-    },
+  const response = await fetch("/api/gemini/speech", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voiceName }),
   });
 
-  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (base64Audio) {
-    return base64Audio;
-  }
-  return null;
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.audio || null;
 }
 
 export async function transcribeAudio(base64Audio: string): Promise<string | null> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: [
-      {
-        parts: [
-          {
-            inlineData: {
-              mimeType: "audio/webm",
-              data: base64Audio
-            }
-          },
-          {
-            text: "Transcribe this audio. Return ONLY the transcribed text, nothing else. If it's silent, return an empty string."
-          }
-        ]
-      }
-    ],
-    config: {
-      temperature: 0.1,
-    },
+  const prompt = "Transcribe this audio. Return ONLY the transcribed text, nothing else. If it's silent, return an empty string.";
+  
+  const response = await fetch("/api/gemini/transcribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base64Audio, prompt }),
   });
 
-  return response.text || null;
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.text || null;
 }
 
 export async function generateImage(prompt: string): Promise<string | null> {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [
-        {
-          text: prompt,
-        },
-      ],
-    },
-    config: {
-      imageConfig: {
-        aspectRatio: "1:1",
-      },
-    },
+  const response = await fetch("/api/gemini/image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
   });
 
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
-    }
-  }
-  return null;
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.url || null;
 }
