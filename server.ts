@@ -243,14 +243,11 @@ export async function startServer() {
 
 // Start server if run directly
 const isMain = process.argv[1]?.endsWith('server.ts') || process.argv[1]?.endsWith('server.js');
-if (isMain || process.env.NODE_ENV === "production") {
+if (isMain) {
   startServer().then(app => {
-    // Only listen if not on Vercel (Vercel handles the listen part for functions)
-    if (!process.env.VERCEL) {
-      const PORT = 3000;
-      app.listen(PORT, "0.0.0.0", () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-      });
-    }
+    const PORT = 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   });
 }
