@@ -26,6 +26,7 @@ import {
   Smartphone,
   Download
 } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Dashboard } from './components/Dashboard';
 import { MentorshipChat } from './components/MentorshipChat';
 import { TaskTracker } from './components/TaskTracker';
@@ -715,6 +716,7 @@ export default function App() {
           />
         </div>
       </motion.nav>
+      <SpeedInsights />
     </div>
   );
 }
@@ -1306,4 +1308,3 @@ function NavButton({ active, onClick, icon, label }: {
     </button>
   );
 }
-
